@@ -1,0 +1,32 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.vcxproj.user
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+
+# Compiled and intermediate files
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.obj
+*.pch
+*.idb
+*.tlog/
+*.recipe
+*.log
+
+# IDE / OS
+.DS_Store
+Thumbs.db
