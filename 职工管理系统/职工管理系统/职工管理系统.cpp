@@ -1,4 +1,5 @@
 #include"workermanager.h"
+#include <limits>
 
 //#include"worker.h"
 //#include"employee.h"
@@ -6,17 +7,17 @@
 //#include"boss.h"
 int main()
 {
-	//²âÊÔ´úÂë
+	//æµ‹è¯•ä»£ç 
 	/*Worker* worker = NULL;
-	worker = new Employee(1, "ÕÅÈý", 1);
+	worker = new Employee(1, "å¼ ä¸‰", 1);
 	worker->showInfo();
 	delete worker;
 
-	worker = new Manager(2, "ÀîËÄ", 2);
+	worker = new Manager(2, "æŽå››", 2);
 	worker->showInfo();
 	delete worker;
 
-	worker = new Boss(3, "ÍõÎå", 3);
+	worker = new Boss(3, "çŽ‹äº”", 3);
 	worker->showInfo();
 	delete worker;*/
 	WorkerManager wm;
@@ -24,32 +25,39 @@ int main()
 	while (true)
 	{
 		wm.Show_Menu();
-		cout << "ÇëÊäÈëÄúµÄÑ¡Ôñ" << endl;
-		cin >> choice;
+		cout << "è¯·è¾“å…¥æ‚¨çš„é€‰æ‹©" << endl;
+		if (!(cin >> choice))
+		{
+			if (cin.eof()) return 0;
+			cin.clear();
+			cin.ignore(numeric_limits<streamsize>::max(), '\\n');
+			cout << "è¾“å…¥æ— æ•ˆï¼Œè¯·è¾“å…¥ 0 è‡³ 7 ä¹‹é—´çš„æ•´æ•°ï¼" << endl;
+			continue;
+		}
 		switch (choice)
 		{
-		case 0://ÍË³öÏµÍ³
+		case 0://é€€å‡ºç³»ç»Ÿ
 			wm.ExitSystem();
 			break;
-		case 1://Ôö¼ÓÖ°¹¤
+		case 1://å¢žåŠ èŒå·¥
 			wm.Add_Emp();
 			break;
-		case 2://ÏÔÊ¾Ö°¹¤
+		case 2://æ˜¾ç¤ºèŒå·¥
 			wm.Show_Emp();
 			break;
-		case 3://É¾³ýÖ°¹¤
+		case 3://åˆ é™¤èŒå·¥
 			wm.Del_Emp();
 			break;
-		case 4://ÐÞ¸ÄÖ°¹¤
+		case 4://ä¿®æ”¹èŒå·¥
 			wm.Mod_Emp();
 			break;
-		case 5://²éÕÒÖ°¹¤
+		case 5://æŸ¥æ‰¾èŒå·¥
 			wm.Find_Emp();
 			break;
-		case 6://ÅÅÐòÖ°¹¤
+		case 6://æŽ’åºèŒå·¥
 			wm.Sort_Emp();
 			break;
-		case 7://Çå¿ÕÎÄ¼þ
+		case 7://æ¸…ç©ºæ–‡ä»¶
 			wm.Clean_File();
 			break;
 		default:
