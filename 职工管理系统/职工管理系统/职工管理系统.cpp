@@ -30,7 +30,7 @@ int main()
 		{
 			if (cin.eof()) return 0;
 			cin.clear();
-			cin.ignore(numeric_limits<streamsize>::max(), '\\n');
+			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			cout << "输入无效，请输入 0 至 7 之间的整数！" << endl;
 			continue;
 		}
@@ -38,7 +38,7 @@ int main()
 		{
 		case 0://退出系统
 			wm.ExitSystem();
-			break;
+			return 0;
 		case 1://增加职工
 			wm.Add_Emp();
 			break;
