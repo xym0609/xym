@@ -1,4 +1,25 @@
 #include"workermanager.h"
+#include <limits>
+#include <cstdio>
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
+namespace
+{
+	bool ReadInt(int& value)
+	{
+		while (true)
+		{
+			if (cin >> value) return true;
+			if (cin.eof()) return false;
+			cin.clear();
+			cin.ignore(numeric_limits<streamsize>::max(), '\\n');
+			cout << "输入无效，请输入整数！" << endl;
+		}
+	}
+}
+
 //四个workermanager作用域下的函数实现
 WorkerManager::WorkerManager()
 {
@@ -79,11 +100,11 @@ void WorkerManager::Add_Emp()
 {
 	cout << "请输入添加职工数量：" << endl;
 	int addNum = 0;//保存用户的输入数量
-	cin >> addNum;
+	if (!ReadInt(addNum)) return;
 	if (addNum > 0)
 	{
 		int newSize = this->m_EmpNum + addNum;//计算添加后最新人数newsize
-		Worker ** newSpace=new Worker* [newSize];//创建一个新的空间存放有newsize个指针的数组
+		Worker ** newSpace=new Worker* [newSize]();//创建一个新的空间存放有newsize个指针的数组
 		//将原来空间下数据拷贝到新空间下
 		if (this->m_EmpArray != NULL)
 		{
@@ -99,7 +120,7 @@ void WorkerManager::Add_Emp()
 			string name;
 			int dSelect;
 			cout << "请输入第：" << i + 1 << "个新职工编号：" << endl;
-			cin >> id;
+			if (!ReadInt(id)) return;
 			while (true)
 			{
 				bool isrepeat = false;
@@ -122,7 +143,7 @@ void WorkerManager::Add_Emp()
 				if (isrepeat)
 				{
 					cout << "输入的职工编号重复，请重新输入！" << endl;
-					cin >> id;
+					if (!ReadInt(id)) return;
 					}
 				else
 				{
@@ -137,7 +158,7 @@ void WorkerManager::Add_Emp()
 				cout << "1、普通职工" << endl;
 				cout << "2、经理" << endl;
 				cout << "3、老板" << endl;
-				cin >> dSelect;
+				if (!ReadInt(dSelect)) return;
 				if (dSelect >= 1 && dSelect <= 3)
 				{
 					break;
@@ -160,7 +181,7 @@ void WorkerManager::Add_Emp()
 				break;
 			default:
 				cout << "输入错误，请重新输入岗位编号！" << endl;
-				cin >> dSelect;
+				if (!ReadInt(dSelect)) return;
 				continue;
 			}
 			newSpace[this->m_EmpNum + i] = worker;
@@ -179,26 +200,28 @@ void WorkerManager::Add_Emp()
 	system("pause");
 	system("cls");
 }
-void WorkerManager::save()
+bool WorkerManager::save()
 {
-	ofstream ofs;
-	ofs.open(FILENAME, ios::out);
-	if (!ofs.is_open())
+	const string tempFile = string(FILENAME) + ".tmp";
+	ofstream ofs(tempFile.c_str(), ios::out | ios::trunc);
+	if (!ofs.is_open()) { cout << "临时文件打开失败，保存失败！" << endl; return false; }
+	for (int i = 0; i < this->m_EmpNum; ++i)
 	{
-		cout << "文件打开失败，保存失败！" << endl;
-		return;
+		if (this->m_EmpArray[i] == NULL) continue;
+		ofs << this->m_EmpArray[i]->m_Id << " " << this->m_EmpArray[i]->m_Name << " " << this->m_EmpArray[i]->m_DeptId << endl;
+		if (!ofs.good()) break;
 	}
-	for (int i = 0;i < this->m_EmpNum;i++)
-	{
-		ofs << this->m_EmpArray[i]->m_Id << " "
-			<< this->m_EmpArray[i]->m_Name << " "
-			<< this->m_EmpArray[i]->m_DeptId << endl;
-	}
-	if (!ofs.good())
-	{
-		cout << "文件写入失败！" << endl;
-	}
+	ofs.flush();
+	bool ok = ofs.good();
 	ofs.close();
+	if (!ok || ofs.fail()) { remove(tempFile.c_str()); cout << "文件写入失败，原数据文件未被替换！" << endl; return false; }
+#ifdef _WIN32
+	if (!MoveFileExA(tempFile.c_str(), FILENAME, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+#else
+	if (rename(tempFile.c_str(), FILENAME) != 0)
+#endif
+	{ remove(tempFile.c_str()); cout << "替换数据文件失败，原数据文件保持不变！" << endl; return false; }
+	return true;
 }
 int WorkerManager::get_EmpNum()
 {
@@ -289,7 +312,7 @@ void WorkerManager::Del_Emp()
 	{
 		cout << "请输入想要删除职工编号：" << endl;
 		int id = 0;
-		cin >> id;
+		if (!ReadInt(id)) return;
 
 		//查找文件里是否有这个编号，并把编号的数组下标赋值给index
 		int index=this->IsExist(id);
@@ -297,24 +320,15 @@ void WorkerManager::Del_Emp()
 		if (index != -1)
 		{
 			//先释放要删除的那个数据的内存
-			delete this->m_EmpArray[index];
-			for (int i = index;i < this->m_EmpNum - 1;i++)
-			{
-				//把数组后面每一位从前往后向前覆盖一位
-				this->m_EmpArray[i] = this->m_EmpArray[i + 1];
-			}
-			//更新当前人数-1
-			this->m_EmpNum--;
-			if (this->m_EmpNum > 0)
-			{
-				this->m_EmpArray[this->m_EmpNum] = nullptr;
-			}
-			else
-			{
-				this->m_FileIsEmpty = true;
-			}
-			this->save();
-			cout << "删除成功！" << endl;
+			Worker* removed = this->m_EmpArray[index];
+			int oldNum = this->m_EmpNum;
+			bool oldEmpty = this->m_FileIsEmpty;
+			for (int i = index; i < oldNum - 1; ++i) this->m_EmpArray[i] = this->m_EmpArray[i + 1];
+			--this->m_EmpNum;
+			this->m_EmpArray[this->m_EmpNum] = NULL;
+			this->m_FileIsEmpty = (this->m_EmpNum == 0);
+			if (this->save()) delete removed;
+			else { for (int i = oldNum - 1; i > index; --i) this->m_EmpArray[i] = this->m_EmpArray[i - 1]; this->m_EmpArray[index] = removed; this->m_EmpNum = oldNum; this->m_FileIsEmpty = oldEmpty; cout << "保存失败，已撤销删除！" << endl; }
 		}
 		else
 		{
@@ -347,7 +361,7 @@ void WorkerManager::Mod_Emp()
 	{
 		cout << "请输入修改职工的编号" << endl;
 		int id;
-		cin >> id;
+		if (!ReadInt(id)) return;
 
 		//查找文件里是否有这个编号，并把编号的数组下标赋值给ret
 		int ret = this->IsExist(id);
@@ -360,12 +374,15 @@ void WorkerManager::Mod_Emp()
 			int dSelect = 0;
 
 			cout << "查到：" << id << "号职工，请输入新职工号：" << endl;
-			cin >> newId;
+			if (!ReadInt(newId)) return;
 			//检查新编号是否与其他职工重复
 			int existIndex = this->IsExist(newId);
 			if (existIndex != -1 && existIndex != ret)
 			{
 				cout << "修改失败，该职工编号已经存在！" << endl;
+				system("pause");
+				system("cls");
+				return;
 			}
 			else
 			{
@@ -378,7 +395,7 @@ void WorkerManager::Mod_Emp()
 				cout << "1、普通岗位：" << endl;
 				cout << "2、经理：" << endl;
 				cout << "3、老板" << endl;
-				cin >> dSelect;
+				if (!ReadInt(dSelect)) return;
 				if (dSelect >= 1 && dSelect <= 3)
 				{
 					break;
@@ -401,10 +418,10 @@ void WorkerManager::Mod_Emp()
 			//把修改后的职工的数据存入数组
 			if (worker != NULL)
 			{
-				delete this->m_EmpArray[ret];
+				Worker* oldWorker = this->m_EmpArray[ret];
 				this->m_EmpArray[ret] = worker;
-				cout << "修改成功！" << endl;
-				this->save();
+				if (this->save()) { delete oldWorker; cout << "修改成功！" << endl; }
+				else { this->m_EmpArray[ret] = oldWorker; delete worker; cout << "保存失败，已撤销修改！" << endl; }
 			}
 			
 		}
@@ -428,12 +445,12 @@ void WorkerManager::Find_Emp()
 		cout << "1、按职工编号查找" << endl;
 		cout << "2、按姓名查找" << endl;
 		int select = 0;
-		cin >> select;
+		if (!ReadInt(select)) return;
 		if (select == 1)
 		{
 			int id;
 			cout << "请输入查找的职工编号：" << endl;
-			cin >> id;
+			if (!ReadInt(id)) return;
 
 			//查找是否存在这个职工编号对应的数据，若有就把下标赋值给ret
 			int ret = IsExist(id);
@@ -496,7 +513,7 @@ void WorkerManager::Sort_Emp()
 		//判断是否输入正确，若不正确则提醒并重新输入直到正确
 		while (true)
 		{
-			cin >> select;
+			if (!ReadInt(select)) return;
 			if (select != 1 && select != 2)
 			{
 				cout << "输入有误，请重新输入！" << endl;
@@ -558,34 +575,18 @@ void WorkerManager::Clean_File()
 	cout << "1、确定" << endl;
 	cout << "2、返回" << endl;
 	int select = 0;
-	cin >> select;
+	if (!ReadInt(select)) return;
 	if (select == 1)
 	{
-		//清空文件并重新创建文件
-		ofstream ofs(FILENAME, ios::trunc);
-		ofs.close();
-		//如果堆区的数组不为空
-		if (this->m_EmpArray != NULL)
-		{
-			//遍历数组内每一位数据并删除且指向空
-			for (int i = 0;i < this->m_EmpNum;i++)
-			{
-				delete this->m_EmpArray[i];
-				this->m_EmpArray[i] = NULL;
-			}
-			//删除完数组内的数据后删除数组并指向空
-			delete[] this->m_EmpArray;
-			this->m_EmpArray = NULL;
-			//更新人数为0
-			this->m_EmpNum = 0;
-			//更新文件状态为空
-			this->m_FileIsEmpty = true;
-		}
-		cout << "清空成功！" << endl;
+		Worker** oldArray = this->m_EmpArray;
+		int oldNum = this->m_EmpNum;
+		bool oldEmpty = this->m_FileIsEmpty;
+		this->m_EmpArray = NULL; this->m_EmpNum = 0; this->m_FileIsEmpty = true;
+		if (this->save()) { for (int i = 0; i < oldNum; ++i) delete oldArray[i]; delete[] oldArray; cout << "清空成功！" << endl; }
+		else { this->m_EmpArray = oldArray; this->m_EmpNum = oldNum; this->m_FileIsEmpty = oldEmpty; cout << "保存失败，已保留原数据！" << endl; }
 	}
-	system("pause");
-	system("cls");
-
+	else if (select != 2) cout << "输入选项有误！" << endl;
+	system("pause"); system("cls");
 }
 WorkerManager::~WorkerManager()
 {
