@@ -1,6 +1,7 @@
 #include"workermanager.h"
 #include <limits>
 #include <cstdio>
+#include <vector>
 #ifdef _WIN32
 #include <Windows.h>
 #endif
@@ -14,7 +15,7 @@ namespace
 			if (cin >> value) return true;
 			if (cin.eof()) return false;
 			cin.clear();
-			cin.ignore(numeric_limits<streamsize>::max(), '\\n');
+			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			cout << "输入无效，请输入整数！" << endl;
 		}
 	}
@@ -186,12 +187,26 @@ void WorkerManager::Add_Emp()
 			}
 			newSpace[this->m_EmpNum + i] = worker;
 		}
-		delete[] this->m_EmpArray;
+		Worker** oldArray = this->m_EmpArray;
+		int oldNum = this->m_EmpNum;
+		bool oldEmpty = this->m_FileIsEmpty;
 		this->m_EmpArray = newSpace;
 		this->m_EmpNum = newSize;
 		this->m_FileIsEmpty = false;
-		cout << "成功添加" << addNum << "名新职工！" << endl;
-		this->save();
+		if (this->save())
+		{
+			delete[] oldArray;
+			cout << "成功添加" << addNum << "名新职工！" << endl;
+		}
+		else
+		{
+			this->m_EmpArray = oldArray;
+			this->m_EmpNum = oldNum;
+			this->m_FileIsEmpty = oldEmpty;
+			for (int i = oldNum; i < newSize; ++i) delete newSpace[i];
+			delete[] newSpace;
+			cout << "保存失败，已撤销添加！" << endl;
+		}
 	}
 	else
 	{
@@ -327,7 +342,7 @@ void WorkerManager::Del_Emp()
 			--this->m_EmpNum;
 			this->m_EmpArray[this->m_EmpNum] = NULL;
 			this->m_FileIsEmpty = (this->m_EmpNum == 0);
-			if (this->save()) delete removed;
+			if (this->save()) { delete removed; cout << "删除成功！" << endl; }
 			else { for (int i = oldNum - 1; i > index; --i) this->m_EmpArray[i] = this->m_EmpArray[i - 1]; this->m_EmpArray[index] = removed; this->m_EmpNum = oldNum; this->m_FileIsEmpty = oldEmpty; cout << "保存失败，已撤销删除！" << endl; }
 		}
 		else
@@ -523,6 +538,7 @@ void WorkerManager::Sort_Emp()
 				break;
 			}
 		}
+		vector<Worker*> oldOrder(this->m_EmpArray, this->m_EmpArray + this->m_EmpNum);
 		//选择排序
 		for (int i = 0;i < m_EmpNum;i++)
 		{
@@ -563,7 +579,11 @@ void WorkerManager::Sort_Emp()
 			}
 		}
 		cout << "排序成功！排序后的结果为：" << endl;
-		this->save();
+		if (!this->save())
+		{
+			for (int i = 0; i < this->m_EmpNum; ++i) this->m_EmpArray[i] = oldOrder[i];
+			cout << "保存失败，已恢复原排序！" << endl;
+		}
 		this->Show_Emp();
 	}
 	system("pause");
